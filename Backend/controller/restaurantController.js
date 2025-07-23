@@ -23,3 +23,22 @@ try{
     )
   }
 }
+
+export const getVendorRestaurant = async (req,res)=>{
+try{
+  const userId = req.user.id
+  console.log("userId", userId);
+  const response = await RestaurantModel.find({createdBy:userId, isDeleted:false});
+  res.json({
+    message "Restaurant fetched successfuly!",
+    status:true,
+    
+  })
+}
+catch(error){
+  res.json({
+    message:error.message || "something went wrong",
+    status:false
+  })
+}
+}
