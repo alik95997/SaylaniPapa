@@ -42,3 +42,7 @@ catch(error){
   })
 }
 }
+
+export const deleteVendorRes = async (req,res)=>{
+  const 
+}
