@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import nodemailer from "nodemailer";
 import { text } from "express";
 import { signupEmailTemplate } from "../templates/emailTemplate.js";
+import OTPModel from "../schema/otp.js"
 
 export const signupController = async (request, response) => {
      try {
@@ -38,11 +39,15 @@ export const signupController = async (request, response) => {
           const otp = Math.floor(100000 + Math.random() * 900000);
           const mailOption = {
                from: process.env.Email,
-               to: process.env.EMAIL,
+               to: userObj.email,
                subject: "User Sign Up ",
                html: signupEmailTemplate(userObj, otp)
           };
-          await transporter.sendMail(mailOption)
+          const userEmail =  await transporter.sendMail(mailOption);
+          await OTPModel.create({
+               otp,
+               email:userObj.email
+          })
           response.json({
                message: "User is signed up successfully",
 
@@ -57,8 +62,8 @@ export const signupController = async (request, response) => {
 export const loginController = async (req, res) => {
      try {
           const body = req.body;
-          if (!body) {
-               return res.json({
+          if (!body.email || !password.password) {
+               return res.status(400).json({
                     message: "required fields are missing.",
                })
           }
@@ -66,7 +71,15 @@ export const loginController = async (req, res) => {
           const user = await UserModel.findOne({ email: body.email });
           console.log(user);
           if (!user) {
-               return response.json({
+               return res.status(400).json({
+                    message: "Invalid Email or Password",
+                    status: false
+               })
+          }
+
+          const comparePass = await bcrypt.compare(body.password, user.password);
+          if (!comparePass){
+               return res.status(400).json({
                     message: "Invalid Email or Password",
                     status: false
                })
@@ -86,9 +99,33 @@ export const loginController = async (req, res) => {
 
           )
      } catch (error) {
-          res.json({
-               message: error.message || "Something went wrong",
+          res.status(500).json({
+               message: error.message || "Internal server error",
                status: false
           })
+     }
+}
+
+export const OTPVerifyController = (req,res)=>{
+     try{
+          const {otp, email} = req.body;
+          const otpRes = await OTPModel.findOne({email ,otp, isUsed: false});
+              console.log("Otp Res", otpRes);
+          if(!otpRes){
+               return res.json({
+                    message:"OTP invalid",
+                    status:false
+               })
+          }
+          otpRes.isUsed = true;
+          await otpRes.save()
+          await UserModel.findOneAndUpdate({email},{isVerified:true});
+          res.json({
+               message:"Account verified",
+               status: true
+          })
+     }
+     catch(error){
+          console.log("error", error.message)
      }
 }
