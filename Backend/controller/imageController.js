@@ -11,6 +11,7 @@ export const uploadImageController = async (req,res)=>{
     })
     res.json({
       message:"Image is uploaded successfully",
+      url: imageRes.secure_url,
       status:true;
     })
   }
